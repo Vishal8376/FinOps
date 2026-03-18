@@ -1,0 +1,45 @@
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #0f172a;
+  color: white;
+}
+
+.container {
+  padding: 30px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.card h2 {
+  margin-bottom: 15px;
+}
+
+.item {
+  padding: 10px;
+  border-bottom: 1px solid #334155;
+}
+
+button {
+  background: #22c55e;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #16a34a;
+}
