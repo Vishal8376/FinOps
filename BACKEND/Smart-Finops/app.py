@@ -80,6 +80,18 @@ def init_db():
     )
     """)
 
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS transaction_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER,
+        action TEXT,
+        role TEXT,
+        user_id INTEGER,
+        timestamp TEXT
+    )
+    """)
+    
     cur.execute("""
     CREATE TABLE IF NOT EXISTS transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -597,10 +609,12 @@ def pending_tx():
     conn = get_db()
     cur = conn.cursor()
 
+    # 👇 show both pending + approved/rejected for that role
     cur.execute("""
-        SELECT * FROM transactions
-        WHERE approver_role=? AND status='pending'
-    """, (user["role"],))
+    SELECT * FROM transactions
+    WHERE approver_role=? AND status='pending'
+    ORDER BY id DESC
+""", (user["role"],))
 
     data = [dict(row) for row in cur.fetchall()]
     conn.close()
@@ -708,11 +722,44 @@ def approve_tx():
         (status, json.dumps(log_data), prev_hash, curr_hash, now_iso()),
     )
 
+    # ✅ Save to history table
+    cur.execute("""
+        INSERT INTO transaction_history (transaction_id, action, role, user_id, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        tx_id,
+        status,
+        user["role"],
+        user["user_id"],
+        now_iso()
+    ))
     conn.commit()
     conn.close()
 
     print(f"[finops] approve_transaction: tx_id={tx_id} status={status} blockchain_ok={blockchain_ok}")
     return jsonify({"status": status})
+
+@app.route("/transaction_history")
+def transaction_history():
+    user = verify_token(request)
+    if not user:
+        return json_error("Unauthorized", 403)
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT th.transaction_id, th.action, th.role, th.timestamp, t.amount
+        FROM transaction_history th
+        JOIN transactions t ON th.transaction_id = t.id
+        WHERE th.role=?
+        ORDER BY th.id DESC
+    """, (user["role"],))
+
+    data = [dict(row) for row in cur.fetchall()]
+    conn.close()
+
+    return jsonify(data)
 
 @app.route("/vendor_transactions")
 def vendor_tx():
